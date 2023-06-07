@@ -1,0 +1,216 @@
+---
+title: "Preliminary analysis of Wadden Sea sample W8"
+output: 
+  html_document:
+    theme: flatly
+    toc: yes
+    toc_float:
+      collapsed: false
+editor_options: 
+  chunk_output_type: console
+knit: (function(inputFile, encoding) {
+  rmarkdown::render(inputFile, encoding = encoding, output_dir = "docs") })  
+---
+
+The goal of this notebook is to do an in-depth analysis of a single sample in order to improve our eDNA analysis pipeline.
+
+<style>
+pre {
+  background-color: '#eeeeee'
+}
+.tocify-extend-page {
+  height: 0 !important;
+}
+</style>
+
+```{r warning=FALSE, message=FALSE}
+library(dplyr)
+library(chameleon)
+library(viridis)
+library(ggplot2)
+library(ggvenn)
+library(tidyr)
+library(reactablefmtr)
+```
+
+## Load results for single sample
+
+This loads all pipeline results from the `runs` folder which is copied from the PacMAN pipeline.
+
+```{r warning=FALSE}
+w8_midori <- read.csv("runs/dev_coi_midori_w8/05-dwca/Occurence_table.csv", sep = "\t", na.strings = c("", "nan")) %>%
+  mutate(otu_db = "MIDORI", marker = "COI")
+w8_ncbi <- read.csv("runs/dev_coi_ncbi_w8/05-dwca/Occurence_table.csv", sep = "\t", na.strings = c("", "nan")) %>%
+  mutate(otu_db = "NCBI", marker = "COI")
+w8_16s <- read.csv("runs/dev_16s_w8/05-dwca/Occurence_table.csv", sep = "\t", na.strings = c("", "nan")) %>%
+  mutate(otu_db = "NCBI", marker = "16S")
+w8_mifish <- read.csv("runs/dev_mifish_w8/05-dwca/Occurence_table.csv", sep = "\t", na.strings = c("", "nan")) %>%
+  mutate(otu_db = "NCBI", marker = "MiFish")
+w8_mimammal <- read.csv("runs/dev_mimammal_w8/05-dwca/Occurence_table.csv", sep = "\t", na.strings = c("", "nan")) %>%
+  mutate(otu_db = "NCBI", marker = "MiMammal")
+w8_teleo<- read.csv("runs/dev_teleo_w8/05-dwca/Occurence_table.csv", sep = "\t", na.strings = c("", "nan")) %>%
+  mutate(otu_db = "NCBI", marker = "Teleo")
+
+w8_combined <- bind_rows(w8_ncbi, w8_16s, w8_mifish, w8_mimammal, w8_teleo)
+```
+
+## Comparison PCR approaches and markers
+
+This compares results by PCR approach (singleplex versus multiplex) and marker.
+
+### Reads
+
+```{r warning=FALSE, out.width="100%", message=FALSE, fig.width=12, fig.height=8}
+stats_reads <- w8_combined %>%
+  group_by(phylum, eventID, marker) %>%
+  summarize(reads = sum(organismQuantity)) %>%
+  ungroup() %>%
+  mutate(identified = !is.na(phylum))
+
+ggplot(data = stats_reads) +
+  geom_bar(aes(y = phylum, x = reads, fill = marker, alpha = identified), stat = "identity") +
+  scale_x_continuous(trans = "log10") +
+  scale_fill_viridis(discrete = TRUE, option = "magma", begin = 0.2, end = 0.8) +
+  scale_alpha_manual(values = c(0.3, 1)) +
+  facet_grid(eventID~marker) +
+  ggtitle("Reads by PCR approach and marker")
+```
+
+### ASVs
+
+```{r warning=FALSE, out.width="100%", message=FALSE, fig.width=12, fig.height=8}
+stats_asvs <- w8_combined %>%
+  group_by(phylum, eventID, marker) %>%
+  summarize(asvs = n()) %>%
+  ungroup() %>%
+  mutate(identified = !is.na(phylum))
+
+ggplot(data = stats_asvs) +
+  geom_bar(aes(y = phylum, x = asvs, fill = marker, alpha = identified), stat = "identity") +
+  scale_x_continuous(trans = "log10") +
+  scale_fill_viridis(discrete = TRUE, option = "magma", begin = 0.2, end = 0.8) +
+  scale_alpha_manual(values = c(0.3, 1)) +
+  facet_grid(eventID~marker) +
+  ggtitle("ASVs by PCR approach and marker")
+```
+
+### Species
+
+```{r warning=FALSE, out.width="100%", message=FALSE, fig.width=12, fig.height=8}
+stats_species <- w8_combined %>%
+  group_by(phylum, eventID, marker) %>%
+  filter(taxonRank == "species") %>%
+  summarize(species = length(unique(scientificName))) %>%
+  ungroup() %>%
+  mutate(identified = !is.na(phylum))
+
+ggplot(data = stats_species) +
+  geom_bar(aes(y = phylum, x = species, fill = marker, alpha = identified), stat = "identity") +
+  scale_x_continuous() +
+  scale_fill_viridis(discrete = TRUE, option = "magma", begin = 0.2, end = 0.8) +
+  scale_alpha_manual(values = c(0.3, 1)) +
+  facet_grid(eventID~marker) +
+  ggtitle("Species by PCR approach and marker")
+```
+
+To do: check why some species do not have phylum.
+
+### Species overlap between PCR approaches
+
+```{r warning=FALSE}
+approaches <- unique(w8_combined$eventID)
+
+species_by_approach <- lapply(approaches, function(approach) {
+  w8_combined %>%
+    filter(eventID == approach & taxonRank == "species") %>% pull(scientificName) %>% unique()
+}) %>% setNames(approaches)
+
+ggvenn(
+  species_by_approach, 
+  fill_color = c("#0073C2FF", "#EFC000FF", "#868686FF", "#CD534CFF"),
+  stroke_size = 0.5, set_name_size = 4
+)
+```
+
+### Species overlap between markers
+
+```{r warning=FALSE}
+markers <- c("COI", "MiFish/MiMammal", "16S", "Teleo")
+
+species_by_marker <- lapply(markers, function(m) {
+  w8_combined %>%
+    mutate(marker = ifelse(marker %in% c("MiFish", "MiMammal"), "MiFish/MiMammal", marker)) %>%
+    filter(marker == m & taxonRank == "species") %>% pull(scientificName) %>% unique()
+}) %>% setNames(markers)
+
+ggvenn(
+  species_by_marker, 
+  fill_color = c("#0073C2FF", "#EFC000FF", "#868686FF", "#CD534CFF"),
+  stroke_size = 0.5, set_name_size = 4
+)
+```
+
+## Top species
+
+```{r warning=FALSE, out.width="100%", message=FALSE, fig.width=12, fig.height=10}
+top_species <- w8_combined %>%
+  filter(taxonRank == "species") %>%
+  group_by(phylum, scientificName) %>%
+  summarize(asvs = n(), reads = sum(organismQuantity)) %>%
+  arrange(desc(reads)) %>%
+  head(30) %>%
+  arrange(phylum) %>%
+  pull(scientificName)
+
+top_species_stats <- w8_combined %>%
+  filter(taxonRank == "species" & scientificName %in% top_species) %>%
+  group_by(phylum, scientificName, eventID, marker) %>%
+  summarize(asvs = n(), reads = sum(organismQuantity)) %>%
+  mutate(scientificName = factor(scientificName, levels = top_species))
+
+ggplot(top_species_stats) +
+  geom_bar(aes(x = reads, y = scientificName, fill = phylum), stat = "identity") +
+  facet_grid(eventID ~ marker) +
+  scale_x_continuous(trans = "log10") +
+  ggtitle("W8 - top species") +
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.background = element_rect(fill = "#ffffff", color = "#000000"),
+    strip.background = element_blank()
+  ) +
+  scale_y_discrete(expand = c(0.05, 0.05)) +
+  scale_fill_brewer(palette = "Paired", na.value = "#eeeeee")
+```
+
+## All species
+
+```{r warning=FALSE, message=FALSE}
+all_species <- w8_combined %>%
+  filter(taxonRank == "species") %>%
+  group_by(scientificName, phylum, marker) %>%
+  summarize(reads = sum(organismQuantity)) %>%
+  spread(marker, reads)
+
+#good_color <- function(x) rgb(colorRamp(c("#7fb7d7", "#ffffbf", "#fc8d59"))(x), maxColorValue = 255)
+good_color <- function(x) rgb(colorRamp(c("#ffffff", "#f2fbd2", "#c9ecb4", "#93d3ab", "#35b0ab"))(x), maxColorValue = 255)
+
+color_def <- colDef(
+  maxWidth = 80,
+  style = function(value) {
+    if (is.numeric(value) & !is.na(value)) {
+      normalized <- log10(value + 1) / 8
+      color <- good_color(normalized)
+      list(background = color, "font-size" = "0.9em")
+    }
+  }
+)
+
+reactable(all_species, defaultSorted = "phylum", pagination = FALSE, highlight = TRUE, compact = TRUE, wrap = FALSE, columns = list(
+  "16S" = color_def,
+  "COI" = color_def,
+  "MiFish" = color_def,
+  "MiMammal" = color_def,
+  "Teleo" = color_def
+))
+```
