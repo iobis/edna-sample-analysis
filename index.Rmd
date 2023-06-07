@@ -38,8 +38,6 @@ library(reactablefmtr)
 This loads all pipeline results from the `runs` folder which is copied from the PacMAN pipeline.
 
 ```{r warning=FALSE}
-w8_midori <- read.csv("runs/dev_coi_midori_w8/05-dwca/Occurence_table.csv", sep = "\t", na.strings = c("", "nan")) %>%
-  mutate(otu_db = "MIDORI", marker = "COI")
 w8_ncbi <- read.csv("runs/dev_coi_ncbi_w8/05-dwca/Occurence_table.csv", sep = "\t", na.strings = c("", "nan")) %>%
   mutate(otu_db = "NCBI", marker = "COI")
 w8_16s <- read.csv("runs/dev_16s_w8/05-dwca/Occurence_table.csv", sep = "\t", na.strings = c("", "nan")) %>%
@@ -112,8 +110,6 @@ ggplot(data = stats_species) +
   facet_grid(eventID~marker) +
   ggtitle("Species by PCR approach and marker")
 ```
-
-To do: check why some species do not have phylum.
 
 ### Species overlap between PCR approaches
 
@@ -192,25 +188,30 @@ all_species <- w8_combined %>%
   summarize(reads = sum(organismQuantity)) %>%
   spread(marker, reads)
 
-#good_color <- function(x) rgb(colorRamp(c("#7fb7d7", "#ffffbf", "#fc8d59"))(x), maxColorValue = 255)
-good_color <- function(x) rgb(colorRamp(c("#ffffff", "#f2fbd2", "#c9ecb4", "#93d3ab", "#35b0ab"))(x), maxColorValue = 255)
+color_scale <- function(x) rgb(colorRamp(c("#ffffff", "#f2fbd2", "#c9ecb4", "#93d3ab", "#35b0ab"))(x), maxColorValue = 255)
 
-color_def <- colDef(
+number_def <- colDef(
   maxWidth = 80,
   style = function(value) {
     if (is.numeric(value) & !is.na(value)) {
       normalized <- log10(value + 1) / 8
-      color <- good_color(normalized)
+      color <- color_scale(normalized)
       list(background = color, "font-size" = "0.9em")
     }
   }
 )
 
+text_def <- colDef(
+  style = list("font-size" = "0.95em")
+)
+
 reactable(all_species, defaultSorted = "phylum", pagination = FALSE, highlight = TRUE, compact = TRUE, wrap = FALSE, columns = list(
-  "16S" = color_def,
-  "COI" = color_def,
-  "MiFish" = color_def,
-  "MiMammal" = color_def,
-  "Teleo" = color_def
+  "scientificName" = text_def,
+  "phylum" = text_def,
+  "16S" = number_def,
+  "COI" = number_def,
+  "MiFish" = number_def,
+  "MiMammal" = number_def,
+  "Teleo" = number_def
 ))
 ```
