@@ -190,7 +190,7 @@ ggplot(top_species_stats) +
 all_species <- w8_combined %>%
   filter(taxonRank == "species") %>%
   group_by(scientificName, phylum, marker) %>%
-  summarize(reads = sum(organismQuantity)) %>%
+  summarize(reads = sum(organismQuantity), single = any(eventID == "W-8-singleplex"), multi = any(eventID == "W-8-multi-tot")) %>%
   spread(marker, reads)
 
 color_scale <- function(x) rgb(colorRamp(c("#ffffff", "#f2fbd2", "#c9ecb4", "#93d3ab", "#35b0ab"))(x), maxColorValue = 255)
@@ -206,6 +206,17 @@ number_def <- colDef(
   }
 )
 
+boolean_def <- colDef(
+  maxWidth = 50,
+  style = function(value) {
+    if (value == TRUE) {
+      list(background = "#FFF3E0")
+    } else {
+      list()
+    }
+  }
+)
+
 text_def <- colDef(
   style = list("font-size" = "0.95em")
 )
@@ -213,6 +224,8 @@ text_def <- colDef(
 reactable(all_species, defaultSorted = "phylum", pagination = FALSE, highlight = TRUE, compact = TRUE, wrap = FALSE, columns = list(
   "scientificName" = text_def,
   "phylum" = text_def,
+  "single" = boolean_def,
+  "multi" = boolean_def,
   "16S" = number_def,
   "COI" = number_def,
   "MiFish" = number_def,
