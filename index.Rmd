@@ -1,5 +1,6 @@
 ---
 title: "Preliminary analysis of Wadden Sea sample W8"
+author: Pieter Provoost
 output: 
   html_document:
     theme: flatly
@@ -12,7 +13,7 @@ knit: (function(inputFile, encoding) {
   rmarkdown::render(inputFile, encoding = encoding, output_dir = "docs") })  
 ---
 
-The goal of this notebook is to do an in-depth analysis of a single sample in order to improve our eDNA analysis pipeline.
+The goal of this notebook is to do an in-depth analysis of a single sample in order to improve [our eDNA analysis pipeline](https://github.com/iobis/PacMAN-pipeline). The compilation of the reference databases used is documented [here](https://github.com/iobis/eDNA_trial_data/blob/master/eDNA_expeditions_ref_dbs.md).
 
 <style>
 pre {
@@ -22,6 +23,8 @@ pre {
   height: 0 !important;
 }
 </style>
+
+## Dependencies
 
 ```{r warning=FALSE, message=FALSE}
 library(dplyr)
@@ -63,7 +66,7 @@ stats_reads <- w8_combined %>%
   group_by(phylum, eventID, marker) %>%
   summarize(reads = sum(organismQuantity)) %>%
   ungroup() %>%
-  mutate(identified = !is.na(phylum))
+  mutate(identified = factor(!is.na(phylum), levels = c(FALSE, TRUE)))
 
 ggplot(data = stats_reads) +
   geom_bar(aes(y = phylum, x = reads, fill = marker, alpha = identified), stat = "identity") +
@@ -81,7 +84,7 @@ stats_asvs <- w8_combined %>%
   group_by(phylum, eventID, marker) %>%
   summarize(asvs = n()) %>%
   ungroup() %>%
-  mutate(identified = !is.na(phylum))
+  mutate(identified = factor(!is.na(phylum), levels = c(FALSE, TRUE)))
 
 ggplot(data = stats_asvs) +
   geom_bar(aes(y = phylum, x = asvs, fill = marker, alpha = identified), stat = "identity") +
@@ -100,13 +103,13 @@ stats_species <- w8_combined %>%
   filter(taxonRank == "species") %>%
   summarize(species = length(unique(scientificName))) %>%
   ungroup() %>%
-  mutate(identified = !is.na(phylum))
+  mutate(identified = factor(!is.na(phylum), levels = c(FALSE, TRUE)))
 
 ggplot(data = stats_species) +
   geom_bar(aes(y = phylum, x = species, fill = marker, alpha = identified), stat = "identity") +
   scale_x_continuous() +
   scale_fill_viridis(discrete = TRUE, option = "magma", begin = 0.2, end = 0.8) +
-  scale_alpha_manual(values = c(0.3, 1)) +
+  scale_alpha_manual(values = c(0.3, 1), drop = FALSE) +
   facet_grid(eventID~marker) +
   ggtitle("Species by PCR approach and marker")
 ```
@@ -146,7 +149,9 @@ ggvenn(
 )
 ```
 
-## Top species
+## Species lists
+
+### Top species
 
 ```{r warning=FALSE, out.width="100%", message=FALSE, fig.width=12, fig.height=10}
 top_species <- w8_combined %>%
@@ -179,7 +184,7 @@ ggplot(top_species_stats) +
   scale_fill_brewer(palette = "Paired", na.value = "#eeeeee")
 ```
 
-## All species
+### All species
 
 ```{r warning=FALSE, message=FALSE}
 all_species <- w8_combined %>%
@@ -215,3 +220,7 @@ reactable(all_species, defaultSorted = "phylum", pagination = FALSE, highlight =
   "Teleo" = number_def
 ))
 ```
+
+## Questionable annotations (work in progress)
+
+Some of the annotations are questionable and need to be looked into. For example: Aurelia miyakei, Argentina kagoshimae.
