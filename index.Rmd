@@ -187,16 +187,25 @@ ggplot(top_species_stats) +
 ### All species
 
 ```{r warning=FALSE, message=FALSE}
+species_pcr <- w8_combined %>%
+  filter(taxonRank == "species") %>%
+  group_by(scientificName) %>%
+  summarize(
+    single = any(eventID == "W-8-singleplex"),
+    multi = any(eventID == "W-8-multi-tot")
+  )
+
 all_species <- w8_combined %>%
   filter(taxonRank == "species") %>%
   group_by(scientificName, phylum, marker) %>%
-  summarize(reads = sum(organismQuantity), single = any(eventID == "W-8-singleplex"), multi = any(eventID == "W-8-multi-tot")) %>%
-  spread(marker, reads)
+  summarize(reads = sum(organismQuantity)) %>%
+  spread(marker, reads) %>%
+  left_join(species_pcr, by = "scientificName")
 
 color_scale <- function(x) rgb(colorRamp(c("#ffffff", "#f2fbd2", "#c9ecb4", "#93d3ab", "#35b0ab"))(x), maxColorValue = 255)
 
 number_def <- colDef(
-  maxWidth = 80,
+  maxWidth = 75,
   style = function(value) {
     if (is.numeric(value) & !is.na(value)) {
       normalized <- log10(value + 1) / 8
@@ -210,7 +219,7 @@ boolean_def <- colDef(
   maxWidth = 50,
   style = function(value) {
     if (value == TRUE) {
-      list(background = "#FFF3E0")
+      list(background = "#FFF3E0", "font-size" = "0.9em")
     } else {
       list()
     }
