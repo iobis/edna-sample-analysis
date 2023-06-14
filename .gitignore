@@ -2,3 +2,5 @@
 .Rhistory
 runs
 temp
+.Rproj.user
+*.Rproj

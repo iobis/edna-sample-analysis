@@ -149,6 +149,21 @@ ggvenn(
 )
 ```
 
+## Human and unidentified reads
+
+```{r warning=FALSE, out.width="100%", message=FALSE, fig.width=12, fig.height=10}
+quality_stats <- w8_combined %>%
+  mutate(type = factor(ifelse(scientificName == "Biota", "unidentified", ifelse(scientificName == "Homo sapiens", "human", "other")), levels = c("human", "unidentified", "other"))) %>%
+  group_by(eventID, marker, type) %>%
+  summarize(reads = sum(organismQuantity))
+
+ggplot(data = quality_stats) +
+  geom_bar(aes(y = reads, x = marker, fill = type), stat = "identity") +
+  scale_fill_viridis(discrete = TRUE, option = "magma", begin = 0.2, end = 0.8) +
+  facet_wrap(~eventID, nrow = 2) +
+  ggtitle("Human and unidentified reads by marker")
+```
+
 ## Species lists
 
 ### Top species
@@ -191,8 +206,10 @@ species_pcr <- w8_combined %>%
   filter(taxonRank == "species") %>%
   group_by(scientificName) %>%
   summarize(
-    single = any(eventID == "W-8-singleplex"),
-    multi = any(eventID == "W-8-multi-tot")
+    #single = any(eventID == "W-8-singleplex"),
+    #multi = any(eventID == "W-8-multi-tot"),
+    single = sum(as.integer(eventID == "W-8-singleplex") * organismQuantity),
+    multi = sum(as.integer(eventID == "W-8-multi-tot") * organismQuantity),
   )
 
 all_species <- w8_combined %>%
@@ -215,10 +232,10 @@ number_def <- colDef(
   }
 )
 
-boolean_def <- colDef(
-  maxWidth = 50,
+pcr_def <- colDef(
+  maxWidth = 75,
   style = function(value) {
-    if (value == TRUE) {
+    if (value > 0) {
       list(background = "#FFF3E0", "font-size" = "0.9em")
     } else {
       list()
@@ -227,14 +244,14 @@ boolean_def <- colDef(
 )
 
 text_def <- colDef(
-  style = list("font-size" = "0.95em")
+  style = list("font-size" = "0.9em")
 )
 
 reactable(all_species, defaultSorted = "phylum", pagination = FALSE, highlight = TRUE, compact = TRUE, wrap = FALSE, columns = list(
   "scientificName" = text_def,
   "phylum" = text_def,
-  "single" = boolean_def,
-  "multi" = boolean_def,
+  "single" = pcr_def,
+  "multi" = pcr_def,
   "16S" = number_def,
   "COI" = number_def,
   "MiFish" = number_def,
