@@ -41,7 +41,7 @@ library(reactablefmtr)
 This loads all pipeline results from the `runs` folder which is copied from the PacMAN pipeline.
 
 ```{r warning=FALSE}
-w8_ncbi <- read.csv("runs/dev_coi_ncbi_w8/05-dwca/Occurence_table.csv", sep = "\t", na.strings = c("", "nan")) %>%
+w8_coi <- read.csv("runs/dev_coi_ncbi_w8_1000alignments/05-dwca/Occurence_table.csv", sep = "\t", na.strings = c("", "nan")) %>%
   mutate(otu_db = "NCBI", marker = "COI")
 w8_16s <- read.csv("runs/dev_16s_w8/05-dwca/Occurence_table.csv", sep = "\t", na.strings = c("", "nan")) %>%
   mutate(otu_db = "NCBI", marker = "16S")
@@ -52,7 +52,7 @@ w8_mimammal <- read.csv("runs/dev_mimammal_w8/05-dwca/Occurence_table.csv", sep 
 w8_teleo<- read.csv("runs/dev_teleo_w8/05-dwca/Occurence_table.csv", sep = "\t", na.strings = c("", "nan")) %>%
   mutate(otu_db = "NCBI", marker = "Teleo")
 
-w8_combined <- bind_rows(w8_ncbi, w8_16s, w8_mifish, w8_mimammal, w8_teleo)
+w8_combined <- bind_rows(w8_coi, w8_16s, w8_mifish, w8_mimammal, w8_teleo)
 ```
 
 ## Comparison PCR approaches and markers
