@@ -3,5 +3,6 @@
 temp
 .Rproj.user
 *.Rproj
-runs/*
+runs/**/*.*
 !runs/**/*.jsonlines
+
