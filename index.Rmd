@@ -15,6 +15,8 @@ knit: (function(inputFile, encoding) {
 
 The goal of this notebook is to do an in-depth analysis of a single sample in order to improve [our eDNA analysis pipeline](https://github.com/iobis/PacMAN-pipeline). The compilation of the reference databases used is documented [here](https://github.com/iobis/eDNA_trial_data/blob/master/eDNA_expeditions_ref_dbs.md).
 
+The source for this notebook as well as some pipeline outputs are [here](https://github.com/iobis/edna-sample-analysis).
+
 <style>
 pre {
   background-color: '#eeeeee'
