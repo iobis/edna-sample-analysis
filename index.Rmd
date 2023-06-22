@@ -34,6 +34,7 @@ library(ggplot2)
 library(ggvenn)
 library(tidyr)
 library(reactablefmtr)
+library(stringr)
 ```
 
 ## Load results for single sample
@@ -41,7 +42,7 @@ library(reactablefmtr)
 This loads all pipeline results from the `runs` folder which is copied from the PacMAN pipeline.
 
 ```{r warning=FALSE}
-w8_coi <- read.csv("runs/dev_coi_ncbi_w8_1000alignments/05-dwca/Occurence_table.csv", sep = "\t", na.strings = c("", "nan")) %>%
+w8_coi <- read.csv("runs/dev_coi_ncbi_w8/05-dwca/Occurence_table.csv", sep = "\t", na.strings = c("", "nan")) %>%
   mutate(otu_db = "NCBI", marker = "COI")
 w8_16s <- read.csv("runs/dev_16s_w8/05-dwca/Occurence_table.csv", sep = "\t", na.strings = c("", "nan")) %>%
   mutate(otu_db = "NCBI", marker = "16S")
@@ -203,7 +204,7 @@ ggplot(top_species_stats) +
 
 ```{r warning=FALSE, message=FALSE}
 species_pcr <- w8_combined %>%
-  filter(taxonRank == "species") %>%
+  filter(taxonRank == "species" | taxonRank == "genus") %>%
   group_by(scientificName) %>%
   summarize(
     #single = any(eventID == "W-8-singleplex"),
@@ -213,7 +214,7 @@ species_pcr <- w8_combined %>%
   )
 
 all_species <- w8_combined %>%
-  filter(taxonRank == "species") %>%
+  filter(taxonRank == "species" | taxonRank == "genus") %>%
   group_by(scientificName, phylum, marker) %>%
   summarize(reads = sum(organismQuantity)) %>%
   spread(marker, reads) %>%
@@ -247,8 +248,18 @@ text_def <- colDef(
   style = list("font-size" = "0.9em")
 )
 
+name_def <- colDef(
+  style = function(value) {
+    if (str_detect(value, " ")) {
+      list(color = "#000000", "font-size" = "0.9em")
+    } else {
+      list(color = "#E09973", "font-size" = "0.9em")
+    }
+  }
+)
+
 reactable(all_species, defaultSorted = "phylum", pagination = FALSE, highlight = TRUE, compact = TRUE, wrap = FALSE, columns = list(
-  "scientificName" = text_def,
+  "scientificName" = name_def,
   "phylum" = text_def,
   "single" = pcr_def,
   "multi" = pcr_def,
@@ -259,7 +270,3 @@ reactable(all_species, defaultSorted = "phylum", pagination = FALSE, highlight =
   "Teleo" = number_def
 ))
 ```
-
-## Questionable annotations (work in progress)
-
-Some of the annotations are questionable and need to be looked into. For example: Aurelia miyakei, Argentina kagoshimae.
