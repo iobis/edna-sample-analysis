@@ -5,4 +5,5 @@ temp
 *.Rproj
 runs/**/*.*
 !runs/**/*.jsonlines
-
+!runs/**/DNA_extension_table.csv
+!runs/**/Occurrence_table.csv
